@@ -4,14 +4,15 @@
 #define DATA_PIN 5
 #define LED_TYPE WS2812B
 #define COLOR_ORDER GRB
-#define NUM_LEDS 24
-#define BRIGHTNESS 96
-#define NUM_PROGRAMS 18
+#define NUM_LEDS 276
+#define BRIGHTNESS 128
+#define NUM_PROGRAMS 7
 
 CRGB leds[NUM_LEDS];
 // variables will change:
 int buttonState = false;  
 int prgm = 0;
+int lastPrgm = 0;
 const byte button = 3;
 long lastRead = 0;
 long debounceDelay = 500;
@@ -21,8 +22,8 @@ void setup() {
   delay(3000); // initial delay of a few seconds is recommended
   FastLED.addLeds<LED_TYPE,DATA_PIN,COLOR_ORDER>(leds, NUM_LEDS).setCorrection(TypicalLEDStrip); // initializes LED strip
   FastLED.setBrightness(BRIGHTNESS);// global brightness
-  pinMode(button, INPUT);
-  attachInterrupt(digitalPinToInterrupt(button), programChange, RISING);
+  pinMode(button, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(button), programChange, FALLING);
 }
 
 // switches off all LEDs
@@ -183,10 +184,27 @@ void showProgramAlternate(CRGB crgb, long delayTime) {
   }
 }
 
-void showProgramShiftMultiPixelColoredSnake(CRGB crgb, int snakeLength, long delayTime) {
+void showProgramShiftMultiPixelRandomSnake(int snakeLength, long delayTime) {
     int i = 0;
     while(1) { 
-      for (int j = i+snakeLength; j > i; --j) {
+      for (int j = i + snakeLength; j > i; --j) {
+        leds[j%NUM_LEDS] = CHSV(random8(), 255, 255);
+      }
+      leds[i%NUM_LEDS] = CRGB::Black;
+      if(buttonState) {
+        break;
+      }
+      
+      FastLED.show();
+      delay(delayTime);
+      i++;
+    }
+}
+
+void showProgramShiftMultiPixelColoredSnake(CRGB crgb, int snakeLength, long delayTime) {
+    int i = 0;
+    while(1) {
+      for (int j = i + snakeLength; j > i; --j) {
         leds[j%NUM_LEDS] = crgb;
       }
       leds[i%NUM_LEDS] = CRGB::Black;
@@ -205,44 +223,34 @@ void showProgramMeetMiddle(CRGB crgb1, CRGB crgb2, long delayTime) {
     int i = 0;
     while(1) {
 
-          // first stripe
-          leds[i] = crgb1;
-          leds[i+1] = crgb1;
-          leds[num_led_index - i] = crgb1;
-          leds[num_led_index - i - 1] = crgb1;   
+      // first stripe
+      leds[i] = crgb1;
+      leds[i + 1] = crgb1;
+      leds[NUM_LEDS - (i + 1)] = crgb2;
+      leds[NUM_LEDS - (i + 2)] = crgb2; 
 
-          // second stripe
-          leds[NUM_LEDS/2 + i] = crgb2;
-          leds[NUM_LEDS/2 + i+1] = crgb2;
-          leds[num_led_index/2 - i] = crgb2;
-          leds[num_led_index/2 - i - 1] = crgb2;     
-
-        if(bounce == false && i >= (NUM_LEDS / 2) - 2) {
-          bounce = true; 
-        } else if( i == 0) {
-          bounce = false;
-        }
+      if (bounce == false && i >= (NUM_LEDS / 2) - 2) {
+        bounce = true;
+      } else if (i == 0) {
+        bounce = false;
+      }
 
       if(buttonState) {
         break;
       }
+      
       FastLED.show();
       delay(delayTime);
+      
       if(!bounce) {
         leds[i] = CRGB::Black;
-        leds[num_led_index - i] = CRGB::Black;
-        leds[NUM_LEDS/2 + i] = CRGB::Black;
-        leds[num_led_index/2 - i] = CRGB::Black;
+        leds[NUM_LEDS - (i + 1)] = CRGB::Black;
         i++;
       } else {
-        leds[i+1] = CRGB::Black;
-        leds[num_led_index - i - 1] = CRGB::Black;
-        leds[NUM_LEDS/2 + i+1] = CRGB::Black;
-        leds[num_led_index/2 - i - 1] = CRGB::Black;
+        leds[i + 1] = CRGB::Black;
+        leds[NUM_LEDS - (i + 2)] = CRGB::Black;
         i--;
       } 
- 
-
     }
 }
 
@@ -250,37 +258,36 @@ void showProgramRainbow(long delayTime) {
     bool bounce = false;
     int i = 0;
     while(1){
+      leds[i] = CRGB::Red;
+      leds[NUM_LEDS - i - 1] = CRGB::Red;
+      
+      leds[i+1] = CRGB::Orange;
+      leds[NUM_LEDS - i - 2] = CRGB::Orange;
 
-        leds[i] = CRGB::Red;
-        leds[NUM_LEDS - i - 1] = CRGB::Red;
-        
-        leds[i+1] = CRGB::Orange;
-        leds[NUM_LEDS - i - 2] = CRGB::Orange;
+      leds[i+2] = CRGB::Yellow;
+      leds[NUM_LEDS - i - 3] = CRGB::Yellow;
+      
+      leds[i+3] = CRGB::Green;
+      leds[NUM_LEDS - i - 4] = CRGB::Green;
 
-        leds[i+2] = CRGB::Yellow;
-        leds[NUM_LEDS - i - 3] = CRGB::Yellow;
-        
-        leds[i+3] = CRGB::Green;
-        leds[NUM_LEDS - i - 4] = CRGB::Green;
-
-        leds[i+4] = CRGB::Blue;
-        leds[NUM_LEDS - i - 5] = CRGB::Blue;
-        
-        leds[i+5] = CRGB::Purple;
-        leds[NUM_LEDS - i - 6] = CRGB::Purple;
-        
-        if(bounce == false && i >= (NUM_LEDS / 2) - 5) {
-          bounce = true; 
-        } else if( i == 0) {
-          bounce = false;
-        }
+      leds[i+4] = CRGB::Blue;
+      leds[NUM_LEDS - i - 5] = CRGB::Blue;
+      
+      leds[i+5] = CRGB::Purple;
+      leds[NUM_LEDS - i - 6] = CRGB::Purple;
+      
+      if(bounce == false && i >= (NUM_LEDS / 2) - 5) {
+        bounce = true;
+      } else if( i == 0) {
+        bounce = false;
+      }
            
       if(buttonState) {
         break;
       }
       FastLED.show();
       leds[i] = CRGB::Black;
-      leds[NUM_LEDS - i -1] = CRGB::Black;
+      leds[NUM_LEDS - i - 1] = CRGB::Black;
       leds[i+5] = CRGB::Black;
       leds[NUM_LEDS - i - 6] = CRGB::Black;
       
@@ -289,6 +296,7 @@ void showProgramRainbow(long delayTime) {
       } else {
           i++;
       }
+      
       delay(delayTime);
     }
 }
@@ -298,64 +306,79 @@ void showProgramRainbow(long delayTime) {
 void loop() {
   //Reset button state
   buttonState = false;
+
+  if (lastPrgm != prgm) {
+    showProgramCleanUp(0);
+  }
+  
+  lastPrgm = prgm;
   switch(prgm) {
-    case 0: 
-      showProgramStrobe(CRGB::Red, 300);
+    case 0:
+      showProgramShiftMultiPixelColoredSnake(CRGB::Green, 12, 20);
       break;
     case 1: 
-      showProgramStrobe(CRGB::Magenta, 150);
+      showProgramShiftMultiPixelColoredSnake(CRGB::Blue, 15, 30);
     break;
-    case 2: 
-      showProgramStrobe(CRGB::Blue, 75);
+    case 2:
+      showProgramShiftMultiPixelColoredSnake(CRGB::Red, 20, 50);
     break;
-    case 3: 
-      showProgramShiftMultiPixelToggle(CRGB::Red, CRGB::Purple, 100);
+    case 3:
+      showProgramMeetMiddle(CRGB::DeepPink, CRGB::DeepSkyBlue, 10);
       break;
     case 4:
-      showProgramShiftMultiPixelToggle(CRGB::Blue, CRGB::Green, 100);
+      showProgramMeetMiddle(CRGB::Green, CRGB::Blue, 10);
       break;
     case 5:
-      showProgramShiftMultiPixelColored(CRGB::Red, 10);
+      showProgramShiftMultiPixelRandomSnake(20, 10);
       break;
     case 6:
-      showProgramShiftMultiPixel(100);
+      showProgramRainbow(10);
       break;
-    case 7:
-      showProgramShiftMultiPixelColoredSnake(CRGB::Green, 6, 50);
-      break;
-    case 8:
-      showProgramShiftMultiPixelColoredSnake(CRGB::Red, 6, 50);
-      break;
-    case 9:
-      showProgramShiftMultiPixelColoredSnake(CRGB::Magenta, 6, 50);
-      break;
-    case 10:
-      showProgramMeetMiddle(CRGB::Red, CRGB::Blue, 100);
-      break;
-    case 11:
-      showProgramMeetMiddle(CRGB::Pink, CRGB::Green, 100);
-      break;
-    case 12:
-      showProgramRainbow(75);
-    break;
-    case 13:
-      showProgramShiftMultiPixelColoredSnake(CRGB::White, 13, 25);
-    break;
-    case 14:
-      showProgramShiftMultiPixelColoredSnake(CRGB::Yellow, 13, 25);
-    break;
-    case 15:
-      showProgramShiftMultiPixelColoredSnake(CRGB::Magenta, 13, 25);
-    break;
-    case 16:
-      showProgramAlternate(CRGB::Red, 250);
-    break;
-    case 17:
-      showProgramAlternate(CRGB::Green, 250);
-    break;
+//    case 4:
+//      showProgramShiftMultiPixelToggle(CRGB::Blue, CRGB::Green, 100);
+//      break;
+//    case 5:
+//      showProgramShiftMultiPixelColored(CRGB::Red, 10);
+//      break;
+//    case 6:
+//      showProgramShiftMultiPixel(100);
+//      break;
+//    case 7:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::Green, 12, 20);
+//      break;
+//    case 8:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::Red, 6, 50);
+//      break;
+//    case 9:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::Magenta, 6, 50);
+//      break;
+//    case 10:
+//      showProgramMeetMiddle(CRGB::Red, CRGB::Blue, 100);
+//      break;
+//    case 11:
+//      showProgramMeetMiddle(CRGB::Pink, CRGB::Green, 100);
+//      break;
+//    case 12:
+//      showProgramRainbow(75);
+//    break;
+//    case 13:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::White, 13, 25);
+//    break;
+//    case 14:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::Yellow, 13, 25);
+//    break;
+//    case 15:
+//      showProgramShiftMultiPixelColoredSnake(CRGB::Magenta, 13, 25);
+//    break;
+//    case 16:
+//      showProgramAlternate(CRGB::Red, 250);
+//    break;
+//    case 17:
+//      showProgramAlternate(CRGB::Green, 250);
+//    break;
     default:
       showProgramCleanUp(2500); // clean up
-    break;   
+      break;
   }
 }
 
@@ -367,4 +390,3 @@ void programChange() {
     buttonState = true;
  }
 }
-  
